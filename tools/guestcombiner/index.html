@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>.dat to .json Converter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1 data-text=".dat to .json Converter">.dat to .json Converter</h1>
+    <input type="file" id="fileInput" multiple accept=".dat">
+    <br>
+    <button onclick="processFiles()">Convert & Download JSON</button>
+  </div>
+
+  <script>
+    function readFile(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          try {
+            const jsonData = JSON.parse(event.target.result);
+            const info = jsonData.guest_account_info;
+            resolve({
+              uid: info["com.garena.msdk.guest_uid"],
+              password: info["com.garena.msdk.guest_password"]
+            });
+          } catch (error) {
+            console.error("Error parsing file:", file.name, error);
+            resolve(null);
+          }
+        };
+        reader.onerror = function(error) {
+          console.error("Error reading file:", file.name, error);
+          resolve(null);
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    function processFiles() {
+      const input = document.getElementById('fileInput');
+      const files = input.files;
+
+      if (!files.length) {
+        alert("Please select at least one .dat file.");
+        return;
+      }
+
+      const readPromises = [];
+      for (let file of files) {
+        readPromises.push(readFile(file));
+      }
+
+      Promise.all(readPromises).then(results => {
+        const validData = results.filter(data => data !== null);
+
+        if (validData.length === 0) {
+          alert("No valid .dat file data found.");
+          return;
+        }
+
+        const blob = new Blob([JSON.stringify(validData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "combined_guest.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+  </script>
+</body>
+</html>
